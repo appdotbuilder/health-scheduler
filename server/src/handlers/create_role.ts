@@ -1,13 +1,29 @@
 
+import { db } from '../db';
+import { rolesTable } from '../db/schema';
 import { type CreateRoleInput, type Role } from '../schema';
 
-export async function createRole(input: CreateRoleInput): Promise<Role> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating a new role (e.g., MRI, CT, On-Call) and persisting it in the database.
-  return Promise.resolve({
-    id: 0,
-    name: input.name,
-    description: input.description || null,
-    created_at: new Date()
-  } as Role);
-}
+export const createRole = async (input: CreateRoleInput): Promise<Role> => {
+  try {
+    // Insert role record
+    const result = await db.insert(rolesTable)
+      .values({
+        name: input.name,
+        description: input.description || null,
+        role_group_id: input.role_group_id || null
+      })
+      .returning()
+      .execute();
+
+    const role = result[0];
+    return {
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      created_at: role.created_at
+    };
+  } catch (error) {
+    console.error('Role creation failed:', error);
+    throw error;
+  }
+};

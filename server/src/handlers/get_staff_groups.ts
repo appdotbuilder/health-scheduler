@@ -1,8 +1,17 @@
 
+import { db } from '../db';
+import { staffGroupsTable } from '../db/schema';
 import { type StaffGroup } from '../schema';
 
-export async function getStaffGroups(): Promise<StaffGroup[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all staff groups from the database with their constraints.
-  return [];
-}
+export const getStaffGroups = async (): Promise<StaffGroup[]> => {
+  try {
+    const results = await db.select()
+      .from(staffGroupsTable)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch staff groups:', error);
+    throw error;
+  }
+};

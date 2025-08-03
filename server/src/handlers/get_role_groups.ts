@@ -1,8 +1,17 @@
 
+import { db } from '../db';
+import { roleGroupsTable } from '../db/schema';
 import { type RoleGroup } from '../schema';
 
-export async function getRoleGroups(): Promise<RoleGroup[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all role groups from the database.
-  return [];
-}
+export const getRoleGroups = async (): Promise<RoleGroup[]> => {
+  try {
+    const results = await db.select()
+      .from(roleGroupsTable)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch role groups:', error);
+    throw error;
+  }
+};

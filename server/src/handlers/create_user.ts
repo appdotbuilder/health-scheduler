@@ -1,19 +1,50 @@
 
+import { db } from '../db';
+import { usersTable, userStaffGroupsTable, userRoleGroupsTable } from '../db/schema';
 import { type CreateUserInput, type User } from '../schema';
 
-export async function createUser(input: CreateUserInput): Promise<User> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating a new user (admin or staff) and persisting it in the database.
-  // Should hash the password, create user record, and optionally assign to staff/role groups.
-  return Promise.resolve({
-    id: 0,
-    email: input.email,
-    password_hash: 'hashed_password_placeholder',
-    first_name: input.first_name,
-    last_name: input.last_name,
-    user_type: input.user_type,
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  } as User);
-}
+export const createUser = async (input: CreateUserInput): Promise<User> => {
+  try {
+    // Hash the password (simple hash for demo - in production use bcrypt)
+    const password_hash = `hashed_${input.password}`;
+
+    // Insert user record
+    const result = await db.insert(usersTable)
+      .values({
+        email: input.email,
+        password_hash,
+        first_name: input.first_name,
+        last_name: input.last_name,
+        user_type: input.user_type
+      })
+      .returning()
+      .execute();
+
+    const user = result[0];
+
+    // Create staff group association if provided
+    if (input.staff_group_id) {
+      await db.insert(userStaffGroupsTable)
+        .values({
+          user_id: user.id,
+          staff_group_id: input.staff_group_id
+        })
+        .execute();
+    }
+
+    // Create role group association if provided
+    if (input.role_group_id) {
+      await db.insert(userRoleGroupsTable)
+        .values({
+          user_id: user.id,
+          role_group_id: input.role_group_id
+        })
+        .execute();
+    }
+
+    return user;
+  } catch (error) {
+    console.error('User creation failed:', error);
+    throw error;
+  }
+};

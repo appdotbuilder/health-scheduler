@@ -1,13 +1,22 @@
 
+import { db } from '../db';
+import { roleGroupsTable } from '../db/schema';
 import { type CreateRoleGroupInput, type RoleGroup } from '../schema';
 
-export async function createRoleGroup(input: CreateRoleGroupInput): Promise<RoleGroup> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating a new role group (e.g., Radiologists) and persisting it in the database.
-  return Promise.resolve({
-    id: 0,
-    name: input.name,
-    description: input.description || null,
-    created_at: new Date()
-  } as RoleGroup);
-}
+export const createRoleGroup = async (input: CreateRoleGroupInput): Promise<RoleGroup> => {
+  try {
+    // Insert role group record
+    const result = await db.insert(roleGroupsTable)
+      .values({
+        name: input.name,
+        description: input.description || null
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Role group creation failed:', error);
+    throw error;
+  }
+};
