@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,21 +17,60 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSeeding, setIsSeeding] = useState(false);
+  const seedingAttempted = useRef(false);
 
   const loadUsers = useCallback(async () => {
+    // Prevent multiple simultaneous attempts
+    if (isSeeding || seedingAttempted.current) return;
+    
     try {
       const result = await trpc.getUsers.query();
-      setUsers(result);
-      // For demo purposes, simulate a logged-in user (first admin or first user)
-      const adminUser = result.find((user: User) => user.user_type === 'admin');
-      const demoUser = adminUser || result[0];
-      setCurrentUser(demoUser || null);
+      
+      // If no users exist, seed the database automatically
+      if (result.length === 0 && !isSeeding && !seedingAttempted.current) {
+        seedingAttempted.current = true;
+        setIsSeeding(true);
+        console.log('No users found, seeding database...');
+        await trpc.seedDatabase.mutate();
+        // Re-fetch users after seeding
+        const seededResult = await trpc.getUsers.query();
+        setUsers(seededResult);
+        // For demo purposes, simulate a logged-in user (first admin or first user)
+        const adminUser = seededResult.find((user: User) => user.user_type === 'admin');
+        const demoUser = adminUser || seededResult[0];
+        setCurrentUser(demoUser || null);
+      } else {
+        setUsers(result);
+        // For demo purposes, simulate a logged-in user (first admin or first user)
+        const adminUser = result.find((user: User) => user.user_type === 'admin');
+        const demoUser = adminUser || result[0];
+        setCurrentUser(demoUser || null);
+      }
     } catch (error) {
       console.error('Failed to load users:', error);
+      // If getUsers query fails (e.g., empty database), try to seed and retry
+      if (!isSeeding && !seedingAttempted.current) {
+        try {
+          seedingAttempted.current = true;
+          setIsSeeding(true);
+          console.log('Error loading users, attempting to seed database...');
+          await trpc.seedDatabase.mutate();
+          const seededResult = await trpc.getUsers.query();
+          setUsers(seededResult);
+          // For demo purposes, simulate a logged-in user (first admin or first user)
+          const adminUser = seededResult.find((user: User) => user.user_type === 'admin');
+          const demoUser = adminUser || seededResult[0];
+          setCurrentUser(demoUser || null);
+        } catch (seedError) {
+          console.error('Failed to seed database:', seedError);
+        }
+      }
     } finally {
+      setIsSeeding(false);
       setIsLoading(false);
     }
-  }, []);
+  }, [isSeeding]);
 
   useEffect(() => {
     loadUsers();
@@ -48,6 +87,9 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading Healthcare Scheduling System...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Initializing database and loading demo data...
+          </p>
         </div>
       </div>
     );
@@ -106,12 +148,12 @@ function App() {
             <CardHeader>
               <CardTitle>Welcome to HealthScheduler Pro</CardTitle>
               <CardDescription>
-                Please wait while we load your profile...
+                Please wait while we initialize your profile...
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600">
-                If no users are available, please create some users first using the admin panel.
+                The system is automatically setting up demo data for immediate access to schedules, staff, roles, and groups.
               </p>
             </CardContent>
           </Card>

@@ -14,6 +14,15 @@ import {
 
 export const seedDatabase = async (): Promise<{ message: string; success: boolean }> => {
   try {
+    // Check if users already exist
+    const existingUsers = await db.select().from(usersTable).execute();
+    if (existingUsers.length > 0) {
+      return {
+        message: 'Database already contains data, skipping seeding',
+        success: true
+      };
+    }
+
     // 1. Create Users (1 admin + 8 staff members)
     const users = await db.insert(usersTable)
       .values([
