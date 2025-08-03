@@ -41,6 +41,7 @@ import { getScheduleAssignments } from './handlers/get_schedule_assignments';
 import { createStaffPreference } from './handlers/create_staff_preference';
 import { getStaffPreferences } from './handlers/get_staff_preferences';
 import { submitStaffPreferences } from './handlers/submit_staff_preferences';
+import { seedDatabase } from './handlers/seed_database';
 
 const t = initTRPC.create({
   transformer: superjson,
@@ -63,6 +64,10 @@ const appRouter = router({
   healthcheck: publicProcedure.query(() => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   }),
+
+  // Database seeding (for development/demo purposes)
+  seedDatabase: publicProcedure
+    .mutation(() => seedDatabase()),
 
   // User management
   createUser: publicProcedure
